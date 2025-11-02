@@ -1,3 +1,12 @@
+# Acknowledgements
+This application was initially created as a final project for the MET CS 673 (Software Engineering) course at Boston University, taught by Professor Yuting Zhang.
+
+[Original Project Github Link](https://github.com/BUMETCS673/cs673olf25project-cs673olf25_team3)
+
+It is currently being adapted and extended as part of the MET CS 783 (Secure Software System) course. The primary objective is to use the existing codebase as a foundation for identifying security vulnerabilities and implementing robust security enhancements.
+
+This work is purely for academic purposes and is not intended for commercial or for-profit use.
+
 # Overview
 
 PlanningJam is a social app designed to make organizing hangouts simple and fun. Users can log in, post plans, and invite friends to join. Friends can respond **Yes** to show their interest, while users can filter plans by type and send friend requests to connect more easily. The app helps people discover activities and coordinate plans efficiently.
