@@ -17,6 +17,7 @@ import dotenv
 import django_mongodb_backend
 from pathlib import Path
 from datetime import timedelta
+import sys
 
 # Load environment variables from .env file
 dotenv.load_dotenv()
@@ -186,3 +187,15 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
 }
+
+
+# Use lightweight in-memory DB for Django tests (MongoDB cannot run migrations)
+if 'test' in sys.argv:
+    print("Using in-memory SQLite database for tests")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+
