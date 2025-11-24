@@ -28,6 +28,15 @@ def create_rsvp(request):
     data['user_id'] = user_id
     data['created_at'] = datetime.now().isoformat()
     serializer = RSVPSerializer(data=data)
+
+    plan_id = data.get("plan_id")
+    try:
+        plan = get_collection('plans').find_one({"_id": ObjectId(plan_id)})
+        if not plan:
+            return Response({"error": "Plan not found"}, status=404)
+    except Exception:
+        return Response({"error": "Invalid plan ID"}, status=400)
+
     if serializer.is_valid():
         try:
             # Check if user has already RSVP'd to this plan
@@ -103,12 +112,14 @@ def delete_rsvp_by_id(request, rsvp_id):
         _id = ObjectId(rsvp_id)
     except Exception:
         return Response({"error": "Invalid ID"}, status=status.HTTP_400_BAD_REQUEST)
+
+    rsvp = rsvp_collection.find_one({"_id": _id})
+    if not rsvp:
+        return Response({"error": "RSVP not found"}, status=404)
+    if rsvp.get("user_id") != str(request.user.id):
+        return Response({"error": "Not authorized"}, status=403)
     
     result = rsvp_collection.delete_one({"_id": _id})
-
-    if result.deleted_count == 0:
-        return Response({"error": "RSVP not found"},status=status.HTTP_404_NOT_FOUND)
-
     return Response({"message": f"RSVP {_id} deleted successfully"}, status=status.HTTP_200_OK)
 
 @api_view(['DELETE'])

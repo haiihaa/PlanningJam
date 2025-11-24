@@ -14,6 +14,8 @@ Uses OneToOneField relationship to avoid migration conflicts.
 
 from django.contrib.auth.models import User
 from django.db import models
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 
 class UserProfile(models.Model):
@@ -51,3 +53,17 @@ class UserProfile(models.Model):
         
     def __str__(self):
         return f"{self.user.username}'s profile"
+    
+
+    # Add email_verified field to UserProfile model
+    email_verified = models.BooleanField(default=False)
+    verification_token = models.CharField(max_length=100, null=True, blank=True)
+
+    # Only allow login if email_verified=True
+    
+    # Create email verification endpoint
+    @api_view(['GET'])
+    @permission_classes([AllowAny])
+    def verify_email(request, token):
+        # Verify token and set email_verified=True
+        pass

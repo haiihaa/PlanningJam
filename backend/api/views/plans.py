@@ -75,6 +75,8 @@ def get_plans(request):
 
     return Response(plans, status=status.HTTP_200_OK)
 
+rsvp_collection = get_collection('rsvps')
+
 
 @api_view(['GET'])
 @renderer_classes([JSONRenderer])
@@ -87,11 +89,37 @@ def get_plans_by_id(request, plan_id):
     
     if not plan:
         return Response({"error": "Plan not found"},status=status.HTTP_404_NOT_FOUND )
-    
-    # Santize the id
-    plan["_id"] = str(plan["_id"])
 
-    return Response({"data": plan}, status=status.HTTP_200_OK)
+    user_id = str(request.user.id)
+    creator_id = plan.get("created_by")
+    
+    # Check if user is creator
+    if creator_id == user_id:
+        return Response({"data": plan}, status=200)
+    
+    # Check if user is friend of creator
+    if is_friend(user_id, creator_id):
+        return Response({"data": plan}, status=200)
+
+     # Check if user has RSVP'd (implicit invite)
+    if rsvp_collection.find_one({"plan_id": plan_id, "user_id": user_id}):
+        return Response({"data": plan}, status=200)
+    
+    return Response({"error": "Not authorized"}, status=403)
+
+def is_friend(user_id: str, creator_id: str) -> bool:
+    """Check if user_id is a friend of creator_id"""
+    from api.utils.mongo import get_collection
+    users_collection = get_collection('users')
+
+    creator = users_collection.find_one({"_id": ObjectId(creator_id)})
+    if not creator:
+        return False
+    
+    friends = creator.get("friends", [])
+    return user_id in friends
+
+
 
 
 @api_view(['PUT'])

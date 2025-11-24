@@ -23,6 +23,10 @@ from rest_framework.decorators import api_view, permission_classes, renderer_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
+from rest_framework.throttling import UserRateThrottle
+
+class FriendRequestThrottle(UserRateThrottle):
+    scope = 'friend_request'
 
 from api.models.friends_models import Friend
 
@@ -32,6 +36,7 @@ User = get_user_model()
 @api_view(['POST'])
 @renderer_classes([JSONRenderer])
 @permission_classes([IsAuthenticated])
+@throttle_classes([FriendRequestThrottle])
 def send_friend_request(request, user_id):
     if str(request.user.id) == str(user_id): # Prevent users from friending themselves
         return Response({'detail': "Cannot send request to yourself"}, status=status.HTTP_400_BAD_REQUEST)

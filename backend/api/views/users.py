@@ -20,7 +20,16 @@ from django.contrib.auth import get_user_model
 from ..serializers.auth_serializer import UserRegistrationSerializer, UserSerializer, UserProfileUpdateSerializer
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q
 # from django.shortcuts import render
+
+
+class UserPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 
 # Framework-generated: 10%
 # Human-written: 30%
@@ -124,6 +133,25 @@ def list_users(request):
 
     return Response(data)
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_users(request):
+    # Add search filter
+    search_query = request.GET.get('search', '')
+    users = User.objects.all()
+    
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        )
+    
+    paginator = UserPagination()
+    paginated_users = paginator.paginate_queryset(users, request)
+    serializer = UserSerializer(paginated_users, many=True)
+    return paginator.get_paginated_response(serializer.data)
 
 @api_view(['GET'])
 @renderer_classes([JSONRenderer])

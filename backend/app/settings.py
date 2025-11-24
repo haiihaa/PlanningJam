@@ -178,6 +178,16 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '10/hour',  # Unauthenticated users
+        'user': '100/hour',  # Authenticated users
+        'friend_request': '20/hour',  # Custom for friend requests
+        'rsvp': '50/hour',  # Custom for RSVP operations
+    }
 }
 
 # Simple JWT settings (possibly move to .env vars later)
