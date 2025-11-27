@@ -203,6 +203,54 @@ class PIIEncryption:
             Decrypted biography text
         """
         return self.decrypt_string(encrypted_bio)
+    
+    def encrypt_int(self, number: Optional[Union[int, str]]) -> Optional[str]:
+        """
+        Encrypt integer value (e.g., zipcode, phone numbers)
+        
+        Args:
+            number: Integer or string representation of number to encrypt
+            
+        Returns:
+            Encrypted number as string or None
+        """
+        if number is None:
+            return None
+            
+        # Convert to string and validate it's a valid integer
+        try:
+            if isinstance(number, str):
+                # Validate it's a valid integer string
+                int(number)
+                number_str = number.strip()
+            else:
+                number_str = str(number)
+        except (ValueError, TypeError):
+            raise EncryptionError(f"Invalid integer value: {number}")
+            
+        return self.encrypt_string(number_str)
+    
+    def decrypt_int(self, encrypted_number: Optional[str]) -> Optional[int]:
+        """
+        Decrypt integer value
+        
+        Args:
+            encrypted_number: Encrypted number string
+            
+        Returns:
+            Decrypted integer or None
+        """
+        if not encrypted_number:
+            return None
+            
+        decrypted_str = self.decrypt_string(encrypted_number)
+        if not decrypted_str:
+            return None
+            
+        try:
+            return int(decrypted_str)
+        except ValueError as e:
+            raise EncryptionError(f"Decrypted value is not a valid integer: {str(e)}")
 
 
 # Global instance for application use
