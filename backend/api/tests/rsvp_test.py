@@ -169,12 +169,22 @@ class TestRSVPAPI:
     @patch('api.views.rsvp.rsvp_collection')
     def test_delete_rsvp_by_id_success(self, mock_collection):
         """Test successful deletion of RSVP by ID"""
+        rsvp_id = str(ObjectId())
+        
+        # Mock find_one to return RSVP owned by the current user
+        mock_rsvp = {
+            "_id": ObjectId(rsvp_id),
+            "plan_id": self.plan_id,
+            "user_id": str(self.user.id),
+            "created_at": datetime.now().isoformat()
+        }
+        mock_collection.find_one.return_value = mock_rsvp
+        
         # Mock the delete_one method
         mock_result = MagicMock()
         mock_result.deleted_count = 1
         mock_collection.delete_one.return_value = mock_result
         
-        rsvp_id = str(ObjectId())
         url = reverse("delete-rsvp-by-id", kwargs={"rsvp_id": rsvp_id})
         response = client.delete(url)
         
@@ -184,7 +194,10 @@ class TestRSVPAPI:
     @patch('api.views.rsvp.rsvp_collection')
     def test_delete_rsvp_by_id_not_found(self, mock_collection):
         """Test deletion of non-existent RSVP by ID"""
-        # Mock the delete_one method
+        # Mock find_one to return None (RSVP not found)
+        mock_collection.find_one.return_value = None
+        
+        # Mock delete_one to return 0 deleted count
         mock_result = MagicMock()
         mock_result.deleted_count = 0
         mock_collection.delete_one.return_value = mock_result
@@ -195,6 +208,26 @@ class TestRSVPAPI:
         
         assert response.status_code == 404
         assert response.data["error"] == "RSVP not found"
+    
+    @patch('api.views.rsvp.rsvp_collection')
+    def test_delete_rsvp_by_id_unauthorized(self, mock_collection):
+        """Test deletion of RSVP by another user (unauthorized)"""
+        rsvp_id = str(ObjectId())
+        
+        # Mock find_one to return RSVP owned by a different user
+        mock_rsvp = {
+            "_id": ObjectId(rsvp_id),
+            "plan_id": self.plan_id,
+            "user_id": "different_user_id",
+            "created_at": datetime.now().isoformat()
+        }
+        mock_collection.find_one.return_value = mock_rsvp
+        
+        url = reverse("delete-rsvp-by-id", kwargs={"rsvp_id": rsvp_id})
+        response = client.delete(url)
+        
+        assert response.status_code == 403
+        assert response.data["error"] == "Not authorized"
 
     def test_delete_rsvp_by_id_invalid_id(self):
         """Test deletion with invalid RSVP ID format"""

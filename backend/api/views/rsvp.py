@@ -104,6 +104,11 @@ def delete_rsvp_by_id(request, rsvp_id):
     except Exception:
         return Response({"error": "Invalid ID"}, status=status.HTTP_400_BAD_REQUEST)
     
+    # Check if user owns the RSVP before deletion
+    rsvp = rsvp_collection.find_one({"_id": _id})
+    if rsvp and rsvp.get("user_id") != str(request.user.id):
+        return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
     result = rsvp_collection.delete_one({"_id": _id})
 
     if result.deleted_count == 0:
