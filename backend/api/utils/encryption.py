@@ -6,9 +6,15 @@ Provides field-level encryption for user personal information including:
 - Date of birth
 - Personal biographies
 
-Uses Fernet symmetric encryption with key derivation from Django SECRET_KEY
+Uses Fernet symmetric encryption with:
+- PII_ENCRYPTION_KEY environment variable (preferred for production)
+- Fallback to key derivation from Django SECRET_KEY (backward compatibility)
+
+To generate a new PII_ENCRYPTION_KEY:
+    python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 """
 import base64
+import logging
 import os
 from datetime import date, datetime
 from typing import Optional, Union
@@ -17,6 +23,8 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 class EncryptionError(Exception):
@@ -28,37 +36,90 @@ class PIIEncryption:
     """
     Handles encryption and decryption of PII data using Fernet symmetric encryption
     
-    Uses Django's SECRET_KEY as the base for key derivation to ensure
-    consistency across application restarts.
+    Key Priority:
+    1. PII_ENCRYPTION_KEY environment variable (recommended for production)
+    2. Derived from Django SECRET_KEY (fallback for backward compatibility)
     """
     
+    KEY_SOURCE_EXPLICIT = "explicit"
+    KEY_SOURCE_DERIVED = "derived"
+    
     def __init__(self):
-        """Initialize encryption with key derived from Django SECRET_KEY"""
+        """Initialize encryption with key from environment or derived from SECRET_KEY"""
         self._fernet = None
+        self._key_source = None
         self._initialize_encryption()
+    
+    def _get_explicit_key(self) -> Optional[bytes]:
+        """
+        Get explicit encryption key from PII_ENCRYPTION_KEY environment variable
+        
+        Returns:
+            bytes: The encryption key if valid, None otherwise
+        """
+        explicit_key = os.environ.get('PII_ENCRYPTION_KEY')
+        
+        if explicit_key:
+            try:
+                key_bytes = explicit_key.encode() if isinstance(explicit_key, str) else explicit_key
+                # Validate the key by attempting to create a Fernet instance
+                Fernet(key_bytes)
+                return key_bytes
+            except Exception:
+                logger.warning(
+                    "PII_ENCRYPTION_KEY is invalid. Falling back to SECRET_KEY derivation. "
+                    "Generate a valid key with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+                )
+                return None
+        return None
+    
+    def _derive_key_from_secret(self) -> bytes:
+        """
+        Derive encryption key from Django SECRET_KEY using PBKDF2
+        
+        Returns:
+            bytes: The derived encryption key
+        """
+        salt = b'planningjam_pii_salt_2025'
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+        )
+        return base64.urlsafe_b64encode(kdf.derive(settings.SECRET_KEY.encode()))
     
     def _initialize_encryption(self):
         """
-        Initialize Fernet encryption using PBKDF2 key derivation
-        
-        Derives encryption key from Django SECRET_KEY to ensure consistency
+        Initialize Fernet encryption preferring PII_ENCRYPTION_KEY if available,
+        otherwise falling back to SECRET_KEY derivation for backward compatibility.
         """
         try:
-            # Use a fixed salt for consistency (in production, consider storing this separately)
-            salt = b'planningjam_pii_salt_2025'
+            # Try explicit key first (preferred for production)
+            explicit_key = self._get_explicit_key()
             
-            # Derive key from Django SECRET_KEY
-            kdf = PBKDF2HMAC(
-                algorithm=hashes.SHA256(),
-                length=32,
-                salt=salt,
-                iterations=100000,
-            )
-            key = base64.urlsafe_b64encode(kdf.derive(settings.SECRET_KEY.encode()))
-            self._fernet = Fernet(key)
-            
+            if explicit_key:
+                self._fernet = Fernet(explicit_key)
+                self._key_source = self.KEY_SOURCE_EXPLICIT
+                logger.info("PII encryption initialized with explicit PII_ENCRYPTION_KEY")
+            else:
+                # Fallback to derived key for backward compatibility
+                derived_key = self._derive_key_from_secret()
+                self._fernet = Fernet(derived_key)
+                self._key_source = self.KEY_SOURCE_DERIVED
+                logger.info("PII encryption initialized with key derived from SECRET_KEY")
+                
         except Exception as e:
             raise EncryptionError(f"Failed to initialize encryption: {str(e)}")
+    
+    @property
+    def key_source(self) -> str:
+        """Return the source of the encryption key ('explicit' or 'derived')"""
+        return self._key_source
+    
+    def is_using_explicit_key(self) -> bool:
+        """Check if encryption is using an explicit PII_ENCRYPTION_KEY"""
+        return self._key_source == self.KEY_SOURCE_EXPLICIT
     
     def encrypt_string(self, plaintext: Optional[str]) -> Optional[str]:
         """
