@@ -6,6 +6,7 @@ Defines all API endpoints exposed to the frontend and tests
 Includes:
 - User registration & profile endpoints
 - JWT authentication (token obtain/refresh) with secure HttpOnly cookies
+- Password reset endpoints
 - Logout endpoints for clearing authentication
 - Friends API (send/respond/list/remove friend requests)
 - Plans API (CRUD operations for plans)
@@ -22,7 +23,7 @@ Notes:
 # AI-generated: 20%
 
 from django.urls import path
-from .views import plans, users, tokens, rsvp
+from .views import plans, users, tokens, rsvp, password_reset
 from .views.friends import send_friend_request, respond_to_friend_request, list_friends, remove_friend
 from .views.tokens import CookieTokenObtainPairView, CookieTokenRefreshView, logout_view, logout_all_view
 
@@ -43,6 +44,11 @@ urlpatterns = [
     path('token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', logout_view, name='logout'),
     path('logout/all/', logout_all_view, name='logout_all'),
+
+    # Password Reset endpoints
+    path('auth/password/reset/request/', password_reset.request_password_reset, name='password_reset_request'),
+    path('auth/password/reset/verify/', password_reset.verify_password_reset_token, name='password_reset_verify'),
+    path('auth/password/reset/confirm/', password_reset.confirm_password_reset, name='password_reset_confirm'),
 
     # Friends endpoints - `/friends/list/` kept for test compatibility
     path('friends/list/', list_friends, name='list_friends_list'),

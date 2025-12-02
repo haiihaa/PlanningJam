@@ -203,6 +203,30 @@ JWT_AUTH_COOKIE_MAX_AGE = 60 * 60  # 1 hour (access token)
 JWT_AUTH_REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7 days (refresh token)
 
 
+# =============================================================================
+# EMAIL CONFIGURATION (for password reset)
+# =============================================================================
+# For development: emails print to console
+# For production: configure SMTP settings in environment variables
+
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend'  # Default: print to console
+)
+
+# SMTP settings (for production)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@planningjam.com')
+
+# Password reset settings
+PASSWORD_RESET_EXPIRY_HOURS = int(os.environ.get('PASSWORD_RESET_EXPIRY_HOURS', 24))
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+
+
 # Use lightweight in-memory DB for Django tests (MongoDB cannot run migrations)
 if 'test' in sys.argv:
     print("Using in-memory SQLite database for tests")
