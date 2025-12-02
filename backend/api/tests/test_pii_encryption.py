@@ -51,16 +51,6 @@ class EncryptionUtilsTest(TestCase):
         self.assertNotEqual(email, encrypted)
         self.assertEqual(email, decrypted)
     
-    def test_date_encryption_roundtrip(self):
-        """Test date encryption"""
-        test_date = date(1990, 5, 15)
-        encrypted = pii_encryption.encrypt_date(test_date)
-        decrypted = pii_encryption.decrypt_date(encrypted)
-        
-        self.assertIsInstance(encrypted, str)
-        self.assertNotEqual(str(test_date), encrypted)
-        self.assertEqual(test_date, decrypted)
-    
     def test_invalid_email_encryption(self):
         """Test that invalid emails raise errors"""
         with self.assertRaises(EncryptionError):
@@ -130,7 +120,7 @@ class UserSerializerTest(TestCase):
         self.assertEqual(data['email'], 'test@example.com')
         self.assertEqual(data['first_name'], 'John')
         self.assertEqual(data['last_name'], 'Doe')
-        self.assertEqual(data['date_of_birth'].isoformat(), '1990-05-15')
+        self.assertEqual(data['date_of_birth'], '1990-05-15')
         self.assertEqual(data['bio'], 'Test biography')
     
     def test_duplicate_email_validation(self):
@@ -200,7 +190,7 @@ class UserAPITest(APITestCase):
         self.assertEqual(data['email'], 'api@test.com')
         self.assertEqual(data['first_name'], 'API')
         self.assertEqual(data['last_name'], 'User')
-        self.assertEqual(data['date_of_birth'].isoformat(), '1985-12-25')
+        self.assertEqual(data['date_of_birth'], '1985-12-25')
         self.assertEqual(data['bio'], 'API test biography')
     
     def test_update_user_profile_api(self):

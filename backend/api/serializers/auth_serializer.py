@@ -81,8 +81,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         
         # Encrypt and create user profile
         try:
-            if profile_data['date_of_birth']:
-                profile_data['date_of_birth'] = pii_encryption.encrypt_date(profile_data['date_of_birth'])
             if profile_data['bio']:
                 profile_data['bio'] = pii_encryption.encrypt_string(profile_data['bio'])
         except EncryptionError as e:
@@ -140,14 +138,7 @@ class UserSerializer(serializers.ModelSerializer):
         """Decrypt date of birth from profile"""
         if not hasattr(obj, 'profile') or not obj.profile.date_of_birth:
             return None
-        try:
-            if isinstance(obj.profile.date_of_birth, str):
-                decrypted_date = pii_encryption.decrypt_date(obj.profile.date_of_birth)
-                return decrypted_date.isoformat() if decrypted_date else None
-            else:
-                return obj.profile.date_of_birth.isoformat()
-        except EncryptionError:
-            return obj.profile.date_of_birth
+        return obj.profile.date_of_birth.isoformat()
     
     def get_bio(self, obj):
         """Decrypt bio from profile"""
@@ -200,13 +191,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         # Update or create profile with encryption
         profile, created = UserProfile.objects.get_or_create(user=instance)
         
-        try:
-            if profile_data['date_of_birth'] is not None:
-                if profile_data['date_of_birth']:
-                    profile.date_of_birth = pii_encryption.encrypt_date(profile_data['date_of_birth'])
-                else:
-                    profile.date_of_birth = None
-            
+        try:            
             if profile_data['bio'] is not None:
                 if profile_data['bio']:
                     profile.bio = pii_encryption.encrypt_string(profile_data['bio'])
