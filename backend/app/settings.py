@@ -64,6 +64,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'api.middleware.CSPMiddleware',
 ]
 
 ROOT_URLCONF = 'app.urls'
@@ -236,4 +237,45 @@ if 'test' in sys.argv:
             'NAME': ':memory:',
         }
     }
+
+
+# =============================================================================
+# CONTENT SECURITY POLICY (CSP) CONFIGURATION
+# =============================================================================
+# CSP headers help prevent XSS, data injection, and other attacks by restricting
+# which resources can be loaded and executed on the page.
+
+CSP_ENABLED = os.environ.get('CSP_ENABLED', 'True') == 'True'
+
+CSP_DIRECTIVES = {
+    'default-src': ["'self'"],  # Only load from same origin by default
+    'script-src': [
+        "'self'",  # Same origin scripts
+        "'unsafe-inline'",  # Inline scripts (needed for dev, should be removed in prod)
+        'http://localhost:5173',  # Vite dev server (development only)
+    ],
+    'style-src': [
+        "'self'",  # Same origin styles
+        "'unsafe-inline'",  # Inline styles (needed for dev, should be removed in prod)
+        'http://localhost:5173',  # Vite dev server
+    ],
+    'img-src': ["'self'", 'data:', 'https:'],  # Images from self, data URIs, and HTTPS
+    'font-src': ["'self'", 'data:', 'https:'],  # Fonts from self, data URIs, and HTTPS
+    'connect-src': [
+        "'self'",  # Same origin
+        'http://localhost:5173',  # Vite dev server (development)
+        'http://localhost:8000',  # Django dev server
+    ],
+    'frame-ancestors': ["'none'"],  # Prevent embedding in iframes
+    'base-uri': ["'self'"],  # Restrict base URL
+    'form-action': ["'self'"],  # Restrict form submissions to same origin
+}
+
+# Adjust CSP for production if needed
+if not DEBUG:
+    # Remove dev server URLs and inline scripts from production CSP
+    CSP_DIRECTIVES['script-src'] = ["'self'"]
+    CSP_DIRECTIVES['style-src'] = ["'self'"]
+    CSP_DIRECTIVES['connect-src'] = ["'self'"]
+
 
