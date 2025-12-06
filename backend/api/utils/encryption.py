@@ -73,6 +73,31 @@ class PIIEncryption:
                 return None
         return None
     
+    def _get_kdf_salt(self) -> bytes:
+        """Return a per-deployment PBKDF2 salt.
+
+        Priority:
+        1) PII_ENCRYPTION_SALT env var (random bytes; base64 is accepted)
+        2) Derive from SECRET_KEY (unpredictable without the secret)
+        """
+        explicit_salt = os.environ.get('PII_ENCRYPTION_SALT')
+        if explicit_salt:
+            salt_value = explicit_salt.encode() if isinstance(explicit_salt, str) else explicit_salt
+            # Accept either raw bytes or base64-encoded salt
+            try:
+                decoded = base64.b64decode(salt_value, validate=True)
+                if len(decoded) >= 16:
+                    return decoded
+            except Exception:
+                pass
+            return salt_value
+
+        # Derive a stable but non-constant salt from SECRET_KEY
+        hasher = hashes.Hash(hashes.SHA256())
+        hasher.update(settings.SECRET_KEY.encode())
+        hasher.update(b"planningjam-pii-salt")
+        return hasher.finalize()[:16]
+
     def _derive_key_from_secret(self) -> bytes:
         """
         Derive encryption key from Django SECRET_KEY using PBKDF2
@@ -80,11 +105,13 @@ class PIIEncryption:
         Returns:
             bytes: The derived encryption key
         """
-        salt = b'planningjam_pii_salt_2025'
+        # Compute salt from env or SECRET_KEY to avoid a hard-coded constant
+        derived_salt = self._get_kdf_salt()
+
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
-            salt=salt,
+            salt=derived_salt,
             iterations=100000,
         )
         return base64.urlsafe_b64encode(kdf.derive(settings.SECRET_KEY.encode()))
