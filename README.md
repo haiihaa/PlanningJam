@@ -166,6 +166,10 @@ All backend development should be done in the `backend/` directory. To setup the
 
     ...
     ```
+    Set up additional `PII_ENCRYPTION_KEY`, to generate a new key, run:
+    ```
+    python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    ```
 
 #### Setting Up MongoDB With The Backend
 

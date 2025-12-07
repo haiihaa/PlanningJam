@@ -168,7 +168,8 @@ CORS_ALLOW_CREDENTIALS = True
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'api.authentication.CookieJWTAuthentication',  # Cookie-based JWT (secure)
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # Header-based JWT (fallback)
         # Keep session auth too, if want the Django admin UI to still work
         'rest_framework.authentication.SessionAuthentication',
     ),
@@ -187,6 +188,43 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
 }
+
+# JWT Cookie Settings - Secure HttpOnly cookie configuration
+# These settings control how JWT tokens are stored in cookies
+JWT_AUTH_COOKIE = 'access_token'  # Cookie name for access token
+JWT_AUTH_REFRESH_COOKIE = 'refresh_token'  # Cookie name for refresh token
+
+# Cookie security settings - adjusted based on environment
+JWT_AUTH_COOKIE_SECURE = not DEBUG  # True in production (HTTPS only)
+JWT_AUTH_COOKIE_SAMESITE = 'Lax'  # 'Strict' for maximum security, 'Lax' for usability
+
+# Cookie max age in seconds (should match token lifetime)
+JWT_AUTH_COOKIE_MAX_AGE = 60 * 60  # 1 hour (access token)
+JWT_AUTH_REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7 days (refresh token)
+
+
+# =============================================================================
+# EMAIL CONFIGURATION (for password reset)
+# =============================================================================
+# For development: emails print to console
+# For production: configure SMTP settings in environment variables
+
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend'  # Default: print to console
+)
+
+# SMTP settings (for production)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@planningjam.com')
+
+# Password reset settings
+PASSWORD_RESET_EXPIRY_HOURS = int(os.environ.get('PASSWORD_RESET_EXPIRY_HOURS', 24))
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
 
 
 # Use lightweight in-memory DB for Django tests (MongoDB cannot run migrations)

@@ -99,6 +99,7 @@ function SignUp() {
           {/* Email */}
           <TextField
             label="Email"
+            type="email"
             fullWidth
             margin="normal"
             value={email}
