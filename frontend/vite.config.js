@@ -5,34 +5,38 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// CSP plugin for development server
+function cspPlugin() {
+  return {
+    name: 'csp-headers',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        // CSP policy for development - allows Vite HMR to work
+        const csp = [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'",  // unsafe-eval needed for Vite HMR
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: https:",
+          "font-src 'self' data:",
+          "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 ws://localhost:5173 ws://127.0.0.1:5173",
+          "frame-ancestors 'none'",
+          "base-uri 'self'",
+          "form-action 'self'"
+        ].join('; ');
+
+        res.setHeader('Content-Security-Policy', csp);
+        res.setHeader('X-Frame-Options', 'DENY');
+        next();
+      });
+    }
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), cspPlugin()],
   server: {
     allowedHosts: process.env.VITE_ALLOWED_HOSTS ? process.env.VITE_ALLOWED_HOSTS.split(',') : [],
-    middlewares: [
-      {
-        name: 'csp-headers',
-        apply: 'serve',
-        handler: (req, res, next) => {
-          // Set CSP headers for Vite dev server
-          res.setHeader(
-            'Content-Security-Policy',
-            [
-              "'self'",
-              "'unsafe-inline'",
-              "'unsafe-eval'",  // Needed for Vite HMR
-              'http://localhost:5173',
-              'ws://localhost:5173',  // WebSocket for HMR
-              'ws://127.0.0.1:5173',
-              'http://localhost:8000',
-              'http://127.0.0.1:8000'
-            ].map(src => `default-src ${src}; script-src ${src}; style-src ${src}; connect-src ${src}; img-src 'self' data: https:; font-src 'self' data:; frame-ancestors 'none'`).join('; ')
-          );
-          next();
-        }
-      }
-    ]
   },
   test: {
     globals: true, // Enables global test APIs without imports
